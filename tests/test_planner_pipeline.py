@@ -1,7 +1,9 @@
+import csv
 import json
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from sputterplan.configuration import (
     OperationConfig,
@@ -11,7 +13,7 @@ from sputterplan.configuration import (
     TargetConfig,
     load_config,
 )
-from sputterplan.errors import PlanningError
+from sputterplan.errors import OutputError, PlanningError
 from sputterplan.outputs import write_outputs
 from sputterplan.pipeline import create_plan
 from sputterplan.results import CompositionProfile
@@ -44,11 +46,67 @@ def test_example_writes_complete_outputs(tmp_path: Path):
         "detailed_profile.csv",
         "summary.json",
         "resolved_config.yaml",
+        "run_summary.txt",
+        "report.html",
     } <= names
     assert {"power_vs_time.png", "composition_vs_thickness.png", "composition_error.png"} <= names
     summary = json.loads((tmp_path / "summary.json").read_text(encoding="utf-8"))
     assert summary["breakpoint_count"] >= 2
     assert summary["point_count"] == 11
+    report = (tmp_path / "report.html").read_text(encoding="utf-8")
+    assert "Operator plan" in report
+    assert "Before running" in report
+    assert "plots/power_vs_time.png" in report
+    assert "Profile points: 11" in (tmp_path / "run_summary.txt").read_text(encoding="utf-8")
+
+
+def test_output_overwrite_is_explicit(tmp_path: Path, three_target_case):
+    config, profile = three_target_case
+    result = create_plan(config, profile)
+    write_outputs(result, config, tmp_path, include_plots=False)
+    with pytest.raises(OutputError, match="enable overwrite"):
+        write_outputs(result, config, tmp_path, include_plots=False)
+    paths = write_outputs(result, config, tmp_path, include_plots=False, overwrite=True)
+    assert (tmp_path / "report.html") in paths
+    assert "<h2>Plots</h2>" not in (tmp_path / "report.html").read_text(encoding="utf-8")
+
+
+def test_html_report_escapes_user_supplied_names(tmp_path: Path):
+    profile_file = tmp_path / "profile.csv"
+    profile_file.write_text("x\n", encoding="utf-8")
+    target_name = "Ni <script>alert(1)</script>"
+    config = PlanConfig(
+        name="Plan <unsafe>",
+        targets=(TargetConfig(target_name, 0.1),),
+        profile=ProfileConfig(path=profile_file),
+        operation=OperationConfig(strategy="total_power", total_power_w=100),
+    )
+    profile = CompositionProfile(np.array([0.0, 1.0]), np.ones((2, 1)), config.target_names)
+    result = create_plan(config, profile)
+    write_outputs(result, config, tmp_path / "output", include_plots=False)
+    report = (tmp_path / "output" / "report.html").read_text(encoding="utf-8")
+    assert "Plan &lt;unsafe&gt;" in report
+    assert "Ni &lt;script&gt;alert(1)&lt;/script&gt;" in report
+    assert "<script>" not in report
+
+
+def test_csv_headers_are_safe_and_unique(tmp_path: Path):
+    profile_file = tmp_path / "profile.csv"
+    profile_file.write_text("x\n", encoding="utf-8")
+    config = PlanConfig(
+        targets=(TargetConfig("=Ni A", 0.1), TargetConfig("Ni-A", 0.2)),
+        profile=ProfileConfig(path=profile_file),
+        operation=OperationConfig(strategy="total_power", total_power_w=100),
+    )
+    profile = CompositionProfile(np.array([0.0, 1.0]), np.full((2, 2), 0.5), config.target_names)
+    result = create_plan(config, profile)
+    output = tmp_path / "output"
+    write_outputs(result, config, output, include_plots=False)
+    with (output / "operating_plan.csv").open(encoding="utf-8", newline="") as handle:
+        header = next(csv.reader(handle))
+    assert "ni_a_power_w" in header
+    assert "ni_a_2_power_w" in header
+    assert all(not column.startswith(("=", "+", "-", "@")) for column in header)
 
 
 def test_hardware_infeasibility_is_reported(tmp_path: Path):

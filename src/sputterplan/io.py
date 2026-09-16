@@ -45,7 +45,11 @@ def _resolve_header_index(headers: Sequence[Any], spec: str | int, label: str) -
 
 
 def _excel_column_index(headers: Sequence[Any], spec: str | int, label: str) -> int:
-    if isinstance(spec, str) and spec.isalpha() and len(spec) <= 3:
+    # Prefer an exact header match. This matters for short element names such as
+    # "Ni", which would otherwise be mistaken for Excel column NI.
+    if isinstance(spec, str) and any(str(value).strip() == spec for value in headers):
+        return _resolve_header_index(headers, spec, label)
+    if isinstance(spec, str) and spec.isalpha() and spec.isupper() and len(spec) <= 3:
         index = column_index_from_string(spec.upper()) - 1
         if index >= len(headers):
             raise ProfileError(f"{label} column {spec!r} is outside the worksheet.")
@@ -119,15 +123,21 @@ def _read_excel(
         else:
             sheet = workbook[profile.sheet]
 
-        headers = list(
-            next(
-                sheet.iter_rows(
-                    min_row=profile.header_row,
-                    max_row=profile.header_row,
-                    values_only=True,
+        try:
+            headers = list(
+                next(
+                    sheet.iter_rows(
+                        min_row=profile.header_row,
+                        max_row=profile.header_row,
+                        values_only=True,
+                    )
                 )
             )
-        )
+        except StopIteration as exc:
+            raise ProfileError(
+                f"profile.header_row {profile.header_row} is beyond the end of "
+                f"worksheet {sheet.title!r}."
+            ) from exc
         distance_index = _excel_column_index(headers, profile.distance_column, "distance")
         specs = _column_specs(profile, target_names)
         composition_indices = [

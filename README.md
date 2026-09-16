@@ -12,6 +12,8 @@ Each run writes:
 - `detailed_profile.csv`: desired composition, ideal and feasible power, scheduled power, predicted composition, and deposition rate at every input point.
 - `summary.json`: run statistics, maximum errors, maximum ramp rates, and warnings.
 - `resolved_config.yaml`: the exact resolved settings used for the run.
+- `run_summary.txt`: a compact human-readable run summary.
+- `report.html`: an operator-friendly report with warnings, plan tables, plots, and a pre-run checklist.
 - `plots/`: power, composition, and composition-error figures.
 
 CSV outputs open directly in Excel while remaining easy to inspect with Python, MATLAB, or laboratory data systems.
@@ -31,6 +33,51 @@ Install test dependencies for development:
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -e ".[test]"
 ```
+
+## 30-second first run
+
+Inspect a composition profile before writing any configuration:
+
+```powershell
+sputterplan inspect-profile .\my_gradient.xlsx --sheet "Desired gradient" --header-row 2
+```
+
+Create a starter configuration. Repeat `--target` for every target and enter each measured
+calibration in nm/min/W:
+
+```powershell
+sputterplan init .\my_gradient.xlsx `
+  --sheet "Desired gradient" `
+  --header-row 2 `
+  --target Ni=0.1003 `
+  --target Ti=0.0533 `
+  --target Nb=0.0710
+```
+
+If headers are duplicated or differ from target names, map them explicitly with one-based column
+numbers or Excel letters:
+
+```powershell
+sputterplan init .\my_gradient.xlsx `
+  --target Ni=0.1003 --target Ti=0.0533 --target Nb=0.0710 `
+  --distance-column A `
+  --composition-column Ni=B --composition-column Ti=C --composition-column Nb=D
+```
+
+Rounded input rows are checked rather than silently changed. Use
+`--composition-sum-tolerance 0.000002` when a known export has that rounding precision, or
+`--normalize-compositions` only when row normalization is scientifically intended.
+
+This creates `my_gradient.yaml` beside the profile. It refuses to replace an existing
+configuration unless `--force` is supplied. Review the YAML, then validate and create the plan:
+
+```powershell
+sputterplan validate .\my_gradient.yaml
+sputterplan plan .\my_gradient.yaml --open-report
+```
+
+By default, results go to `results\my_gradient` beside the configuration. SputterPlan also
+protects existing output files; use `--force` only when you intend to replace a previous run.
 
 ## Run the included example
 
@@ -69,6 +116,11 @@ Start the small desktop launcher with:
 ```
 
 Choose a YAML or JSON configuration and an output folder, then select **Create plan**. The same tested calculation engine is used by the GUI, CLI, and Python API.
+
+The launcher validates by calculating the complete plan, stays responsive during longer runs,
+shows the same human-readable summary as the CLI, suggests a run-specific output folder, protects
+existing results by default, and provides one-click access to the report and output folder.
+Keyboard shortcuts: `Ctrl+O` chooses a configuration and `Ctrl+Enter` creates the plan.
 
 ## Composition profile
 
@@ -207,6 +259,10 @@ Advanced users can construct `CompositionProfile` directly from NumPy arrays and
 ```
 
 The suite covers configuration validation, profile parsing, closed-form power calculations, fixed-target behavior, one through twelve targets, planner error guarantees, output generation, and MATLAB regression data.
+
+It also includes real XLSX fixtures, CLI onboarding and overwrite behavior, desktop-window smoke
+tests, HTML/CSV safety checks, and randomized property tests across varying profile sizes and one
+through ten targets.
 
 ## Operational limitations and safety
 

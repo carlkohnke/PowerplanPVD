@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -70,6 +71,11 @@ class ProfileConfig:
             raise ConfigurationError("profile.data_start_row must be at least 1.")
         if self.data_end_row is not None and self.data_end_row < 1:
             raise ConfigurationError("profile.data_end_row must be at least 1.")
+        start = self.data_start_row or self.header_row + 1
+        if self.data_end_row is not None and self.data_end_row < start:
+            raise ConfigurationError(
+                "profile.data_end_row must be greater than or equal to the first data row."
+            )
         if self.composition_basis not in {"fraction", "percent"}:
             raise ConfigurationError("profile.composition_basis must be 'fraction' or 'percent'.")
         if self.composition_sum_tolerance <= 0:
@@ -146,8 +152,9 @@ class PlanConfig:
         for target in self.targets:
             target.validate()
         names = self.target_names
-        if len(set(names)) != len(names):
-            raise ConfigurationError("Target names must be unique.")
+        folded_names = [name.casefold() for name in names]
+        if len(set(folded_names)) != len(folded_names):
+            raise ConfigurationError("Target names must be unique, ignoring capitalization.")
         unknown = set(self.profile.composition_columns) - set(names)
         if unknown:
             raise ConfigurationError(
@@ -171,7 +178,13 @@ def _mapping(value: Any, label: str) -> Mapping[str, Any]:
 
 
 def _resolve_path(raw: str, base_dir: Path) -> Path:
-    expanded = Path(os.path.expandvars(os.path.expanduser(raw)))
+    expanded_text = os.path.expandvars(os.path.expanduser(raw))
+    if re.search(r"\$(?:[A-Za-z_][A-Za-z0-9_]*|\{[^}]+\})|%[^%]+%", expanded_text):
+        raise ConfigurationError(
+            f"Profile path contains an unresolved environment variable: {raw!r}. "
+            "Set the variable or replace it with a file path."
+        )
+    expanded = Path(expanded_text)
     return expanded if expanded.is_absolute() else (base_dir / expanded).resolve()
 
 
@@ -182,16 +195,21 @@ def plan_config_from_dict(data: Mapping[str, Any], base_dir: Path | None = None)
     targets_raw = root.get("targets")
     if not isinstance(targets_raw, list):
         raise ConfigurationError("targets must be a list.")
-    targets = tuple(TargetConfig(**_mapping(item, "target")) for item in targets_raw)
+    try:
+        targets = tuple(TargetConfig(**_mapping(item, "target")) for item in targets_raw)
+    except TypeError as exc:
+        raise ConfigurationError(f"Invalid target settings: {exc}") from exc
 
     profile_raw = dict(_mapping(root.get("profile"), "profile"))
     if "path" not in profile_raw:
         raise ConfigurationError("profile.path is required.")
     profile_raw["path"] = _resolve_path(str(profile_raw["path"]), base_dir)
-    profile = ProfileConfig(**profile_raw)
-
-    operation = OperationConfig(**dict(_mapping(root.get("operation", {}), "operation")))
-    planner = PlannerConfig(**dict(_mapping(root.get("planner", {}), "planner")))
+    try:
+        profile = ProfileConfig(**profile_raw)
+        operation = OperationConfig(**dict(_mapping(root.get("operation", {}), "operation")))
+        planner = PlannerConfig(**dict(_mapping(root.get("planner", {}), "planner")))
+    except TypeError as exc:
+        raise ConfigurationError(f"Invalid configuration field: {exc}") from exc
     config = PlanConfig(
         name=str(root.get("name", "Sputtering plan")),
         targets=targets,
@@ -199,7 +217,13 @@ def plan_config_from_dict(data: Mapping[str, Any], base_dir: Path | None = None)
         operation=operation,
         planner=planner,
     )
-    config.validate()
+    try:
+        config.validate()
+    except (AttributeError, TypeError) as exc:
+        raise ConfigurationError(
+            f"A configuration value has the wrong type: {exc}. "
+            "Check that names are text and numeric settings are numbers."
+        ) from exc
     return config
 
 
