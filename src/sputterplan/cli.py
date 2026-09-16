@@ -72,7 +72,12 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Explicitly normalize every composition row to sum to one.",
     )
-    initialize.add_argument("--total-power", type=float, default=300.0)
+    initialize.add_argument(
+        "--max-total-power",
+        type=float,
+        default=300.0,
+        help="Maximum combined target power in watts.",
+    )
     initialize.add_argument("--off-below", type=float, default=0.0)
     initialize.add_argument("--min-stable", type=float, default=0.0)
     initialize.add_argument("--force", action="store_true", help="Overwrite an existing config.")
@@ -151,7 +156,7 @@ def main(argv: list[str] | None = None) -> int:
                 composition_basis=args.composition_basis,
                 composition_sum_tolerance=args.composition_sum_tolerance,
                 normalize_compositions=args.normalize_compositions,
-                total_power_w=args.total_power,
+                max_total_power_w=args.max_total_power,
                 off_below_power_w=args.off_below,
                 min_stable_power_w=args.min_stable,
                 composition_columns=composition_columns,
@@ -186,9 +191,10 @@ def main(argv: list[str] | None = None) -> int:
             overwrite=args.force,
         )
         summary = result.summary()
+        status_stream = sys.stderr if args.json else sys.stdout
         print(json.dumps(summary, indent=2) if args.json else format_summary_text(summary))
-        print(f"\nWrote {len(paths)} files to {Path(output).resolve()}")
-        print(f"Report: {Path(output).resolve() / 'report.html'}")
+        print(f"\nWrote {len(paths)} files to {Path(output).resolve()}", file=status_stream)
+        print(f"Report: {Path(output).resolve() / 'report.html'}", file=status_stream)
         if args.open_report:
             webbrowser.open((Path(output).resolve() / "report.html").as_uri())
         return 0

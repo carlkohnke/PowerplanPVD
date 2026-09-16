@@ -14,8 +14,8 @@ Every plan needs three things:
    the desired fraction or percentage of every target material.
 2. **Linear sputtering calibrations** — one measured deposition-rate-per-watt value in nm/min/W
    for each target.
-3. **Process limitations** — the total-power or fixed-target operating rule plus applicable off,
-   minimum-stable-power, maximum-power, and ramp-rate limits.
+3. **Process limitations** — the maximum-total-power or fixed-target operating rule plus applicable
+   off, minimum-stable-power, maximum-power, and ramp-rate limits.
 
 PowerplanPVD assumes each target's deposition rate varies linearly with power. See the
 [configuration reference](docs/configuration.md) for calibration requirements and available
@@ -42,7 +42,7 @@ sputterplan init .\gradient.xlsx `
   --target Ni=0.1003 `
   --target Ti=0.0533 `
   --target Nb=0.0710 `
-  --total-power 300
+  --max-total-power 300
 ```
 where the --target command denotes the slope of the measured linear deposition-rate-versus-power
 relationship in nm/min/W.
@@ -80,6 +80,14 @@ py -3.13 -m venv .venv
   strategies, and planner settings
 - [Calculation model](docs/model.md) — equations, assumptions, and numerical approach
 - [Operator review checklist](docs/operator_review.md) — checks before using a plan
+
+Development setup and the required pull-request checks are documented in
+[CONTRIBUTING.md](CONTRIBUTING.md). GitHub Actions runs linting, formatting, tests, and a wheel
+build on every push and pull request.
+
+## License
+
+PowerplanPVD is available under the [MIT License](LICENSE).
 
 PowerplanPVD is a planning tool; it does not control deposition equipment or establish safe
 equipment limits. Review every generated schedule using approved laboratory procedures.

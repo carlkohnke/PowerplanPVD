@@ -9,6 +9,7 @@ description = "Create practical multi-target magnetron sputtering operation plan
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "Carl A. Kohnke" }]
+license = { file = "LICENSE" }
 dependencies = [
   "matplotlib>=3.8",
   "numpy>=1.26",
@@ -22,6 +23,11 @@ test = ["hypothesis>=6.0", "pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.8", "scipy
 [project.scripts]
 sputterplan = "sputterplan.cli:main"
 sputterplan-gui = "sputterplan.gui:main"
+
+[project.urls]
+Homepage = "https://github.com/carlkohnke/PowerplanPVD"
+Issues = "https://github.com/carlkohnke/PowerplanPVD/issues"
+Source = "https://github.com/carlkohnke/PowerplanPVD"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/sputterplan"]

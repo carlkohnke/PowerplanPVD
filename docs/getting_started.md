@@ -60,7 +60,7 @@ sputterplan init .\gradient.xlsx `
   --target Ni=0.1003 `
   --target Ti=0.0533 `
   --target Nb=0.0710 `
-  --total-power 300
+  --max-total-power 300
 ```
 
 `--target Ni=0.1003` means the Ni target has a calibration slope of 0.1003 nm/min/W. It does not
@@ -77,7 +77,7 @@ sputterplan init .\gradient.xlsx `
   --composition-column Ni=B `
   --composition-column Ti=C `
   --composition-column Nb=D `
-  --total-power 300
+  --max-total-power 300
 ```
 
 The generated YAML is a starting point. Review it and add the actual target and equipment limits
@@ -85,7 +85,7 @@ before using the plan.
 
 ## Write a configuration manually
 
-Configurations may be YAML or JSON. The following is a compact total-power example:
+Configurations may be YAML or JSON. The following is a compact maximum-total-power example:
 
 ```yaml
 name: Ni-Ti-Nb gradient
@@ -115,8 +115,8 @@ targets:
     max_power_w: 250
 
 operation:
-  strategy: total_power
-  total_power_w: 300
+  strategy: max_total_power
+  max_total_power_w: 300
   hardware_limit_policy: error
 ```
 

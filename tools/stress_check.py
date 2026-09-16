@@ -27,7 +27,7 @@ def main() -> None:
             name=f"{target_count}-target stress",
             targets=targets,
             profile=ProfileConfig(path=Path(__file__)),
-            operation=OperationConfig(strategy="total_power", total_power_w=500.0),
+            operation=OperationConfig(strategy="max_total_power", max_total_power_w=500.0),
             planner=PlannerConfig(
                 power_tolerance_abs_w=0.5,
                 power_tolerance_rel=0.02,

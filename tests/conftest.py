@@ -27,7 +27,7 @@ def three_target_case(tmp_path: Path):
             TargetConfig("C", 0.08),
         ),
         profile=ProfileConfig(path=placeholder),
-        operation=OperationConfig(strategy="total_power", total_power_w=300),
+        operation=OperationConfig(strategy="max_total_power", max_total_power_w=300),
         planner=PlannerConfig(
             power_tolerance_abs_w=0.5,
             power_tolerance_rel=0.02,

@@ -13,7 +13,7 @@ from sputterplan.configuration import (
     TargetConfig,
     load_config,
 )
-from sputterplan.errors import OutputError, PlanningError
+from sputterplan.errors import OutputError, PlanningError, ProfileError
 from sputterplan.outputs import write_outputs
 from sputterplan.pipeline import create_plan
 from sputterplan.results import CompositionProfile
@@ -81,7 +81,7 @@ def test_html_report_escapes_user_supplied_names(tmp_path: Path):
         name="Plan <unsafe>",
         targets=(TargetConfig(target_name, 0.1),),
         profile=ProfileConfig(path=profile_file),
-        operation=OperationConfig(strategy="total_power", total_power_w=100),
+        operation=OperationConfig(strategy="max_total_power", max_total_power_w=100),
     )
     profile = CompositionProfile(np.array([0.0, 1.0]), np.ones((2, 1)), config.target_names)
     result = create_plan(config, profile)
@@ -98,7 +98,7 @@ def test_csv_headers_are_safe_and_unique(tmp_path: Path):
     config = PlanConfig(
         targets=(TargetConfig("=Ni A", 0.1), TargetConfig("Ni-A", 0.2)),
         profile=ProfileConfig(path=profile_file),
-        operation=OperationConfig(strategy="total_power", total_power_w=100),
+        operation=OperationConfig(strategy="max_total_power", max_total_power_w=100),
     )
     profile = CompositionProfile(np.array([0.0, 1.0]), np.full((2, 2), 0.5), config.target_names)
     result = create_plan(config, profile)
@@ -121,7 +121,7 @@ def test_hardware_infeasibility_is_reported(tmp_path: Path):
         ),
         profile=ProfileConfig(path=placeholder),
         operation=OperationConfig(
-            strategy="total_power", total_power_w=100, hardware_limit_policy="clip"
+            strategy="max_total_power", max_total_power_w=100, hardware_limit_policy="clip"
         ),
         planner=PlannerConfig(composition_tolerance_abs=0.005),
     )
@@ -150,3 +150,28 @@ def test_breakpoint_limit_fails_loudly(three_target_case):
     )
     with np.testing.assert_raises(PlanningError):
         create_plan(limited, profile)
+
+
+@pytest.mark.parametrize(
+    "distance, compositions, message",
+    [
+        ([0.0, 0.0], [[0.5, 0.5], [0.5, 0.5]], "increase strictly"),
+        ([0.0, 1.0], [[0.5, 0.5], [0.4, 0.4]], "sum to one"),
+        ([0.0, 1.0], [[0.5, 0.5], [float("nan"), float("nan")]], "finite"),
+    ],
+)
+def test_public_api_validates_supplied_profiles(three_target_case, distance, compositions, message):
+    config, _ = three_target_case
+    invalid = CompositionProfile(
+        np.asarray(distance), np.asarray(compositions), config.target_names[:2]
+    )
+    if len(config.targets) != 2:
+        config = PlanConfig(
+            name=config.name,
+            targets=config.targets[:2],
+            profile=config.profile,
+            operation=config.operation,
+            planner=config.planner,
+        )
+    with pytest.raises(ProfileError, match=message):
+        create_plan(config, invalid)

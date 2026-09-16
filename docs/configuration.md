@@ -87,14 +87,17 @@ change the deposited thickness and composition.
 
 ## There are multiple operating strategies...
 
-### Fixed total chamber power
-The target powers are distributed so their sum equals `total_power_w` whenever the target bounds
-make that possible.
+### Maximum total chamber power
+
+`max_total_power_w` is a ceiling, not a required constant. The unconstrained calculation uses that
+ceiling for maximum deposition rate. If an individual `max_power_w` would be exceeded, clip mode
+scales all target powers together, preserving their ratios and the requested composition while the
+combined power falls below the ceiling.
 
 ```yaml
 operation:
-  strategy: total_power
-  total_power_w: 300
+  strategy: max_total_power
+  max_total_power_w: 300
   hardware_limit_policy: error
 ```
 
@@ -175,8 +178,8 @@ targets:
     max_ramp_rate_w_per_s: 2
 
 operation:
-  strategy: total_power
-  total_power_w: 300
+  strategy: max_total_power
+  max_total_power_w: 300
   hardware_limit_policy: error
 
 planner:

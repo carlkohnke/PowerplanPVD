@@ -20,8 +20,8 @@ targets:
     max_ramp_rate_w_per_s: 2.0
 
 operation:
-  strategy: total_power
-  total_power_w: 300.0
+  strategy: max_total_power
+  max_total_power_w: 300.0
   hardware_limit_policy: clip
 
 planner:

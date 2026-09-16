@@ -18,12 +18,12 @@ x_i = r_i / sum(r_j)
 The model does not include transport geometry, sticking coefficients, target poisoning,
 resputtering, density changes, or composition-dependent yield.
 
-## Total-power solution
+## Maximum-total-power solution
 
-For specified total power `P_total`:
+For maximum total power `P_max`, the unconstrained solution uses the available ceiling:
 
 ```text
-r_total = P_total / sum(x_i / K_i)
+r_total = P_max / sum(x_i / K_i)
 r_i = x_i r_total
 P_i = r_i / K_i
 ```
@@ -43,10 +43,11 @@ P_i = x_i r_total / K_i
 
 ## Hardware-feasible powers
 
-For total-power operation, PowerplanPVD identifies targets that should be off, applies minimum and
-maximum target powers, and projects the ideal power vector onto the feasible bounds while
-maintaining the requested total-power sum. If those constraints are mutually incompatible,
-`hardware_limit_policy: error` stops; `clip` returns the bounded powers and a prominent warning.
+For maximum-total-power operation, PowerplanPVD first calculates the desired-composition power
+ratios at `P_max`. If an individual target would exceed `max_power_w`, clip mode scales every target
+power by the same factor. This preserves composition while allowing the combined power to fall
+below `P_max`. Off and minimum-stable thresholds are then applied. Error mode stops instead of
+scaling when an individual maximum would be exceeded.
 
 For fixed-target operation, it applies each target's on/off, minimum, and maximum constraints and
 then holds the selected target at the configured fixed power.

@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import yaml
@@ -47,7 +48,7 @@ def test_cli_inspect_and_init_workflow(tmp_path: Path, capsys):
                 "Ni=0.1",
                 "--target",
                 "Ti=0.05",
-                "--total-power",
+                "--max-total-power",
                 "250",
             ]
         )
@@ -55,7 +56,7 @@ def test_cli_inspect_and_init_workflow(tmp_path: Path, capsys):
     )
     created = yaml.safe_load(config.read_text(encoding="utf-8"))
     assert [item["name"] for item in created["targets"]] == ["Ni", "Ti"]
-    assert created["operation"]["total_power_w"] == 250
+    assert created["operation"]["max_total_power_w"] == 250
     assert "Next: sputterplan validate" in capsys.readouterr().out
 
 
@@ -93,3 +94,28 @@ def test_cli_init_defaults_beside_profile_and_protects_existing_file(tmp_path: P
 def test_cli_reports_missing_configuration(tmp_path: Path, capsys):
     assert main(["validate", str(tmp_path / "missing.yaml")]) == 2
     assert "Could not read configuration" in capsys.readouterr().err
+
+
+def test_cli_json_output_is_machine_parseable(tmp_path: Path, capsys):
+    root = Path(__file__).resolve().parents[1]
+    config = root / "examples" / "Example Simple 3 Component" / "simple_three_target_plan.yaml"
+    output = tmp_path / "json-run"
+
+    assert (
+        main(
+            [
+                "plan",
+                str(config),
+                "--output",
+                str(output),
+                "--no-plots",
+                "--json",
+            ]
+        )
+        == 0
+    )
+    captured = capsys.readouterr()
+    summary = json.loads(captured.out)
+    assert summary["name"] == "Three-target demonstration"
+    assert "Wrote 6 files" in captured.err
+    assert "Report:" in captured.err

@@ -11,24 +11,24 @@ targets:
     rate_nm_per_min_per_watt: 0.1003
     off_below_power_w: 1.0
     min_stable_power_w: 2.0
-    max_power_w: 300.0
+    max_power_w: 250.0
     max_ramp_rate_w_per_s: 2.0
   - name: Ti
     rate_nm_per_min_per_watt: 0.0533
     off_below_power_w: 1.0
     min_stable_power_w: 2.0
-    max_power_w: 300.0
+    max_power_w: 250.0
     max_ramp_rate_w_per_s: 2.0
   - name: Nb
     rate_nm_per_min_per_watt: 0.0710
     off_below_power_w: 1.0
     min_stable_power_w: 2.0
-    max_power_w: 300.0
+    max_power_w: 250.0
     max_ramp_rate_w_per_s: 2.0
 
 operation:
-  strategy: total_power
-  total_power_w: 300.0
+  strategy: max_total_power
+  max_total_power_w: 300.0
   hardware_limit_policy: clip
 
 planner:

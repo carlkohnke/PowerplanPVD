@@ -2,6 +2,10 @@
 
 ## 0.3.0 - 2026-09-16
 
+- Renamed total-power operation to maximum-total-power operation and made the configured value a
+  ceiling; individual target maxima now scale all target powers together to preserve composition.
+- Hardened configuration and profile validation against non-finite values and incomplete rows.
+- Added GitHub Actions checks for formatting, linting, tests, coverage, and wheel builds.
 - Consolidated planning onto one hardware-aware calculation path.
 - Simplified configurations by removing the calculation-mode setting.
 - Reorganized and validated the bundled two-target and three-target examples.

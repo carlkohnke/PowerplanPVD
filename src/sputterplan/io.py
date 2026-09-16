@@ -152,9 +152,9 @@ def _read_excel(
             sheet.iter_rows(min_row=start, max_row=stop, values_only=True), start=start
         ):
             values = list(values_tuple)
-            distance_value = values[distance_index] if distance_index < len(values) else None
-            if distance_value is None or distance_value == "":
+            if not values or all(value is None or value == "" for value in values):
                 continue
+            distance_value = values[distance_index] if distance_index < len(values) else None
             distances.append(_as_float(distance_value, row_number, str(profile.distance_column)))
             compositions.append(
                 [

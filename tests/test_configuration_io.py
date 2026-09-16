@@ -32,8 +32,8 @@ targets:
   - name: A
     rate_nm_per_min_per_watt: 0.1
 operation:
-  strategy: total_power
-  total_power_w: 100
+  strategy: max_total_power
+  max_total_power_w: 100
 """,
         encoding="utf-8",
     )
@@ -53,7 +53,7 @@ profile:
 targets:
   - {name: A, rate_nm_per_min_per_watt: 0.1}
   - {name: B, rate_nm_per_min_per_watt: 0.2}
-operation: {strategy: total_power, total_power_w: 100}
+operation: {strategy: max_total_power, max_total_power_w: 100}
 """,
         encoding="utf-8",
     )
@@ -73,7 +73,7 @@ profile:
 targets:
   - {name: A, rate_nm_per_min_per_watt: 0.1}
   - {name: B, rate_nm_per_min_per_watt: 0.2}
-operation: {strategy: total_power, total_power_w: 100}
+operation: {strategy: max_total_power, max_total_power_w: 100}
 """,
         encoding="utf-8",
     )
@@ -95,7 +95,7 @@ def test_tsv_profile_and_one_based_column_numbers(tmp_path: Path):
                 {"name": "A", "rate_nm_per_min_per_watt": 0.1},
                 {"name": "B", "rate_nm_per_min_per_watt": 0.2},
             ],
-            "operation": {"strategy": "total_power", "total_power_w": 100},
+            "operation": {"strategy": "max_total_power", "max_total_power_w": 100},
         }
     )
     profile = load_profile(config)
@@ -131,7 +131,7 @@ def test_excel_profile_uses_element_headers_before_column_letters(tmp_path: Path
                 {"name": "Ni", "rate_nm_per_min_per_watt": 0.1},
                 {"name": "Ti", "rate_nm_per_min_per_watt": 0.2},
             ],
-            "operation": {"strategy": "total_power", "total_power_w": 100},
+            "operation": {"strategy": "max_total_power", "max_total_power_w": 100},
         }
     )
     profile = load_profile(config)
@@ -154,7 +154,7 @@ def test_excel_profile_supports_letters_and_requires_sheet_selection(tmp_path: P
             {"name": "Ni", "rate_nm_per_min_per_watt": 0.1},
             {"name": "Ti", "rate_nm_per_min_per_watt": 0.2},
         ],
-        "operation": {"strategy": "total_power", "total_power_w": 100},
+        "operation": {"strategy": "max_total_power", "max_total_power_w": 100},
     }
     with pytest.raises(ProfileError, match="profile.sheet is required"):
         load_profile(plan_config_from_dict(root))
@@ -183,7 +183,7 @@ def test_configuration_errors_are_actionable(tmp_path: Path, mutator, message):
     data = {
         "profile": {"path": str(profile)},
         "targets": [{"name": "A", "rate_nm_per_min_per_watt": 1}],
-        "operation": {"strategy": "total_power", "total_power_w": 100},
+        "operation": {"strategy": "max_total_power", "max_total_power_w": 100},
     }
     mutator(data)
     with pytest.raises(ConfigurationError, match=message):
@@ -195,7 +195,7 @@ def test_unresolved_environment_variable_is_reported(monkeypatch):
     data = {
         "profile": {"path": "$SPUTTERPLAN_MISSING_FOR_TEST/profile.csv"},
         "targets": [{"name": "A", "rate_nm_per_min_per_watt": 1}],
-        "operation": {"strategy": "total_power", "total_power_w": 100},
+        "operation": {"strategy": "max_total_power", "max_total_power_w": 100},
     }
     with pytest.raises(ConfigurationError, match="unresolved environment variable"):
         plan_config_from_dict(data)
@@ -208,7 +208,7 @@ def test_literal_percent_and_dollar_characters_are_allowed_in_paths(tmp_path: Pa
         {
             "profile": {"path": str(profile)},
             "targets": [{"name": "A", "rate_nm_per_min_per_watt": 1}],
-            "operation": {"strategy": "total_power", "total_power_w": 100},
+            "operation": {"strategy": "max_total_power", "max_total_power_w": 100},
         }
     )
     assert config.profile.path == profile
@@ -222,9 +222,82 @@ def test_wrong_configuration_value_type_is_actionable(tmp_path: Path):
             {
                 "profile": {"path": str(profile)},
                 "targets": [{"name": "A", "rate_nm_per_min_per_watt": "fast"}],
-                "operation": {"strategy": "total_power", "total_power_w": 100},
+                "operation": {"strategy": "max_total_power", "max_total_power_w": 100},
             }
         )
+
+
+@pytest.mark.parametrize(
+    "field, value, message",
+    [
+        ("rate_nm_per_min_per_watt", float("nan"), "finite, positive"),
+        ("rate_nm_per_min_per_watt", float("inf"), "finite, positive"),
+        ("min_stable_power_w", float("nan"), "finite and non-negative"),
+        ("max_power_w", float("inf"), "finite and positive"),
+    ],
+)
+def test_configuration_rejects_nonfinite_target_values(tmp_path: Path, field, value, message):
+    profile = tmp_path / "profile.csv"
+    profile.write_text("distance_nm,A\n0,1\n1,1\n", encoding="utf-8")
+    target = {"name": "A", "rate_nm_per_min_per_watt": 1.0, field: value}
+    with pytest.raises(ConfigurationError, match=message):
+        plan_config_from_dict(
+            {
+                "profile": {"path": str(profile)},
+                "targets": [target],
+                "operation": {"strategy": "max_total_power", "max_total_power_w": 100},
+            }
+        )
+
+
+def test_configuration_rejects_nonfinite_operation_and_unknown_root_fields(tmp_path: Path):
+    profile = tmp_path / "profile.csv"
+    profile.write_text("distance_nm,A\n0,1\n1,1\n", encoding="utf-8")
+    base = {
+        "profile": {"path": str(profile)},
+        "targets": [{"name": "A", "rate_nm_per_min_per_watt": 1}],
+        "operation": {"strategy": "max_total_power", "max_total_power_w": float("nan")},
+    }
+    with pytest.raises(ConfigurationError, match="finite.*positive"):
+        plan_config_from_dict(base)
+
+    base["operation"]["max_total_power_w"] = 100
+    base["unexpected"] = True
+    with pytest.raises(ConfigurationError, match="Unknown top-level"):
+        plan_config_from_dict(base)
+
+
+def test_data_start_row_must_follow_header(tmp_path: Path):
+    profile = tmp_path / "profile.csv"
+    profile.write_text("distance_nm,A\n0,1\n1,1\n", encoding="utf-8")
+    with pytest.raises(ConfigurationError, match="must be after"):
+        plan_config_from_dict(
+            {
+                "profile": {"path": str(profile), "header_row": 2, "data_start_row": 2},
+                "targets": [{"name": "A", "rate_nm_per_min_per_watt": 1}],
+                "operation": {"strategy": "max_total_power", "max_total_power_w": 100},
+            }
+        )
+
+
+def test_excel_rejects_partially_filled_row_with_missing_distance(tmp_path: Path):
+    workbook_path = tmp_path / "missing_distance.xlsx"
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["distance_nm", "A"])
+    sheet.append([0, 1])
+    sheet.append([None, 1])
+    sheet.append([2, 1])
+    workbook.save(workbook_path)
+    config = plan_config_from_dict(
+        {
+            "profile": {"path": str(workbook_path)},
+            "targets": [{"name": "A", "rate_nm_per_min_per_watt": 1}],
+            "operation": {"strategy": "max_total_power", "max_total_power_w": 100},
+        }
+    )
+    with pytest.raises(ProfileError, match="Missing value at row 3"):
+        load_profile(config)
 
 
 def test_profile_rejects_duplicate_header_and_nonincreasing_distance(tmp_path: Path):
@@ -234,7 +307,7 @@ def test_profile_rejects_duplicate_header_and_nonincreasing_distance(tmp_path: P
         {
             "profile": {"path": str(duplicate)},
             "targets": [{"name": "A", "rate_nm_per_min_per_watt": 1}],
-            "operation": {"strategy": "total_power", "total_power_w": 100},
+            "operation": {"strategy": "max_total_power", "max_total_power_w": 100},
         }
     )
     with pytest.raises(ProfileError, match="duplicated"):
@@ -246,7 +319,7 @@ def test_profile_rejects_duplicate_header_and_nonincreasing_distance(tmp_path: P
         {
             "profile": {"path": str(decreasing)},
             "targets": [{"name": "A", "rate_nm_per_min_per_watt": 1}],
-            "operation": {"strategy": "total_power", "total_power_w": 100},
+            "operation": {"strategy": "max_total_power", "max_total_power_w": 100},
         }
     )
     with pytest.raises(ProfileError, match="increase strictly"):

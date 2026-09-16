@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import math
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -146,8 +147,8 @@ def parse_target_spec(spec: str) -> tuple[str, float]:
         raise ConfigurationError(
             f"Target {name!r} rate must be a number, got {raw_rate!r}."
         ) from exc
-    if rate <= 0:
-        raise ConfigurationError(f"Target {name!r} rate must be positive.")
+    if not math.isfinite(rate) or rate <= 0:
+        raise ConfigurationError(f"Target {name!r} rate must be finite and positive.")
     return name, rate
 
 
@@ -200,7 +201,7 @@ def write_starter_config(
     composition_basis: str = "fraction",
     composition_sum_tolerance: float = 1e-6,
     normalize_compositions: bool = False,
-    total_power_w: float = 300.0,
+    max_total_power_w: float = 300.0,
     off_below_power_w: float = 0.0,
     min_stable_power_w: float = 0.0,
     composition_columns: dict[str, str | int] | None = None,
@@ -237,13 +238,19 @@ def write_starter_config(
     }
     if composition_basis not in {"fraction", "percent"}:
         raise ConfigurationError("composition_basis must be 'fraction' or 'percent'.")
-    if composition_sum_tolerance <= 0:
-        raise ConfigurationError("composition_sum_tolerance must be positive.")
-    if total_power_w <= 0:
-        raise ConfigurationError("total_power_w must be positive.")
-    if off_below_power_w < 0 or min_stable_power_w < off_below_power_w:
+    if not math.isfinite(composition_sum_tolerance) or composition_sum_tolerance <= 0:
+        raise ConfigurationError("composition_sum_tolerance must be finite and positive.")
+    if not math.isfinite(max_total_power_w) or max_total_power_w <= 0:
+        raise ConfigurationError("max_total_power_w must be finite and positive.")
+    if (
+        not math.isfinite(off_below_power_w)
+        or not math.isfinite(min_stable_power_w)
+        or off_below_power_w < 0
+        or min_stable_power_w < off_below_power_w
+    ):
         raise ConfigurationError(
-            "Power thresholds require 0 <= off_below_power_w <= min_stable_power_w."
+            "Power thresholds must be finite and require "
+            "0 <= off_below_power_w <= min_stable_power_w."
         )
 
     destination = Path(output_path).expanduser().resolve()
@@ -277,8 +284,8 @@ def write_starter_config(
             for name, rate in targets
         ],
         "operation": {
-            "strategy": "total_power",
-            "total_power_w": total_power_w,
+            "strategy": "max_total_power",
+            "max_total_power_w": max_total_power_w,
             "hardware_limit_policy": "clip",
         },
         "planner": {

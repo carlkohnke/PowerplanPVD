@@ -19,11 +19,11 @@ from sputterplan.results import CompositionProfile
 @given(
     target_count=st.integers(min_value=1, max_value=10),
     point_count=st.integers(min_value=2, max_value=35),
-    total_power=st.floats(min_value=10, max_value=1000, allow_nan=False, allow_infinity=False),
+    max_total_power=st.floats(min_value=10, max_value=1000, allow_nan=False, allow_infinity=False),
     phase=st.floats(min_value=0, max_value=6.28, allow_nan=False, allow_infinity=False),
 )
 def test_random_smooth_profiles_preserve_core_invariants(
-    target_count: int, point_count: int, total_power: float, phase: float
+    target_count: int, point_count: int, max_total_power: float, phase: float
 ):
     placeholder = Path(__file__)
     targets = tuple(
@@ -32,7 +32,7 @@ def test_random_smooth_profiles_preserve_core_invariants(
     config = PlanConfig(
         targets=targets,
         profile=ProfileConfig(path=placeholder),
-        operation=OperationConfig(strategy="total_power", total_power_w=total_power),
+        operation=OperationConfig(strategy="max_total_power", max_total_power_w=max_total_power),
         planner=PlannerConfig(
             power_tolerance_abs_w=0.5,
             power_tolerance_rel=0.02,
@@ -55,7 +55,7 @@ def test_random_smooth_profiles_preserve_core_invariants(
     assert result.schedule.scheduled_power_w.shape == (point_count, target_count)
     assert np.all(np.isfinite(result.schedule.scheduled_power_w))
     assert np.all(np.diff(result.physics.time_s) > 0)
-    np.testing.assert_allclose(result.physics.feasible_power_w.sum(axis=1), total_power, rtol=1e-10)
+    assert np.all(result.physics.feasible_power_w.sum(axis=1) <= max_total_power + 1e-10)
     np.testing.assert_allclose(result.schedule.scheduled_composition.sum(axis=1), 1.0, atol=1e-12)
     assert result.schedule.breakpoint_indices[0] == 0
     assert result.schedule.breakpoint_indices[-1] == point_count - 1

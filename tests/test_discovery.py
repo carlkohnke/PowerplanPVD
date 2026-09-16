@@ -60,7 +60,7 @@ def test_parse_target_spec(spec, expected):
     assert parse_target_spec(spec) == expected
 
 
-@pytest.mark.parametrize("spec", ["Ni", "=0.1", "Ni=abc", "Ni=0", "Ni=-1"])
+@pytest.mark.parametrize("spec", ["Ni", "=0.1", "Ni=abc", "Ni=0", "Ni=-1", "Ni=nan", "Ni=inf"])
 def test_parse_target_spec_errors(spec):
     with pytest.raises(ConfigurationError):
         parse_target_spec(spec)
@@ -89,7 +89,7 @@ def test_write_starter_config_round_trips(tmp_path: Path):
         destination,
         ["Ni=0.1", "Ti=0.05"],
         composition_basis="percent",
-        total_power_w=250,
+        max_total_power_w=250,
         off_below_power_w=1,
         min_stable_power_w=2,
     )
@@ -98,7 +98,7 @@ def test_write_starter_config_round_trips(tmp_path: Path):
     assert raw["profile"]["path"] == "../gradient.csv"
     loaded = load_config(destination)
     assert loaded.target_names == ("Ni", "Ti")
-    assert loaded.operation.total_power_w == 250
+    assert loaded.operation.max_total_power_w == 250
 
 
 def test_starter_config_supports_explicit_excel_columns(tmp_path: Path):

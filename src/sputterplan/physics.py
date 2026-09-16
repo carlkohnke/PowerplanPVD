@@ -9,30 +9,25 @@ from .errors import PlanningError
 from .results import CompositionProfile, PhysicsResult
 
 
-def _project_box_sum(
-    desired: np.ndarray, lower: np.ndarray, upper: np.ndarray, total: float
-) -> np.ndarray:
-    """Euclidean projection onto lower/upper bounds with a fixed sum."""
-    if total < float(np.sum(lower)) - 1e-10 or total > float(np.sum(upper)) + 1e-10:
-        raise PlanningError(
-            "The requested total power is incompatible with target minimum/maximum powers."
-        )
-    lo = float(np.min(desired - upper)) - abs(total)
-    hi = float(np.max(desired - lower)) + abs(total)
-    for _ in range(100):
-        midpoint = 0.5 * (lo + hi)
-        candidate = np.clip(desired - midpoint, lower, upper)
-        if np.sum(candidate) > total:
-            lo = midpoint
-        else:
-            hi = midpoint
-    result = np.clip(desired - 0.5 * (lo + hi), lower, upper)
-    residual = total - float(np.sum(result))
-    if abs(residual) > 1e-8:
-        free = (result > lower + 1e-10) & (result < upper - 1e-10)
-        if np.any(free):
-            result[free] += residual / np.count_nonzero(free)
-    return result
+def _scale_to_target_maxima(desired: np.ndarray, maximum: np.ndarray) -> tuple[np.ndarray, float]:
+    """Scale a power vector without changing its deposition composition."""
+    powered = desired > 0
+    if not np.any(powered):
+        return desired.copy(), 1.0
+    scale = min(1.0, float(np.min(maximum[powered] / desired[powered])))
+    return desired * scale, scale
+
+
+def _reduce_to_total_maximum(values: np.ndarray, lower: np.ndarray, max_total: float) -> np.ndarray:
+    """Reduce powers without crossing active-target minimums; never add power."""
+    excess = float(np.sum(values)) - max_total
+    if excess <= 1e-10:
+        return values
+    reducible = np.maximum(values - lower, 0.0)
+    available = float(np.sum(reducible))
+    if available + 1e-10 < excess:
+        raise PlanningError("Active target minimum powers exceed operation.max_total_power_w.")
+    return values - reducible * (excess / available)
 
 
 def _apply_individual_limits(ideal: np.ndarray, config: PlanConfig) -> tuple[np.ndarray, list[str]]:
@@ -43,7 +38,11 @@ def _apply_individual_limits(ideal: np.ndarray, config: PlanConfig) -> tuple[np.
         if target.off_below_power_w > 0:
             values[values < target.off_below_power_w] = 0.0
         if target.min_stable_power_w > 0:
-            mask = (values >= target.off_below_power_w) & (values < target.min_stable_power_w)
+            mask = (
+                (values > 0)
+                & (values >= target.off_below_power_w)
+                & (values < target.min_stable_power_w)
+            )
             values[mask] = target.min_stable_power_w
         if target.max_power_w is not None and np.any(values > target.max_power_w):
             if config.operation.hardware_limit_policy == "error":
@@ -66,26 +65,31 @@ def _apply_hardware_limits(ideal: np.ndarray, config: PlanConfig) -> tuple[np.nd
         ]
     )
 
-    if config.operation.strategy == "total_power":
-        total = float(config.operation.total_power_w)
+    if config.operation.strategy == "max_total_power":
+        max_total = float(config.operation.max_total_power_w)
+        scaled_rows = 0
         for row_index, desired in enumerate(ideal):
-            active = desired >= off
-            lower = np.where(active, minimum, 0.0)
-            upper = np.where(active, maximum, 0.0)
-            finite_upper = np.where(np.isfinite(upper), upper, total)
-            try:
-                feasible[row_index] = _project_box_sum(desired, lower, finite_upper, total)
-            except PlanningError:
+            bounded, scale = _scale_to_target_maxima(desired, maximum)
+            if scale < 1.0 - 1e-12:
                 if config.operation.hardware_limit_policy == "error":
+                    target_index = int(np.argmax(desired / maximum))
                     raise PlanningError(
-                        f"Hardware limits are infeasible at profile row {row_index + 1}."
+                        f"Ideal power exceeds max_power_w for target "
+                        f"{config.targets[target_index].name!r} at profile row {row_index + 1}."
                     )
-                clipped = np.clip(desired, lower, finite_upper)
-                feasible[row_index] = clipped
-                warnings.append(
-                    "Some rows cannot maintain total power after applying target limits; "
-                    "the achieved total power is reported in the outputs."
-                )
+                scaled_rows += 1
+
+            # A desired zero must remain off even when off_below_power_w is zero.
+            active = (bounded > 0) & (bounded >= off)
+            lower = np.where(active, minimum, 0.0)
+            bounded[~active] = 0.0
+            bounded[active & (bounded < minimum)] = minimum[active & (bounded < minimum)]
+            feasible[row_index] = _reduce_to_total_maximum(bounded, lower, max_total)
+        if scaled_rows:
+            warnings.append(
+                f"Target maximum powers reduced achievable total power at {scaled_rows} "
+                "profile row(s); target power ratios were scaled together to preserve composition."
+            )
     else:
         feasible, target_warnings = _apply_individual_limits(ideal, config)
         warnings.extend(target_warnings)
@@ -124,9 +128,9 @@ def compute_physics(config: PlanConfig, profile: CompositionProfile) -> PhysicsR
     )
     composition = profile.compositions
 
-    if config.operation.strategy == "total_power":
+    if config.operation.strategy == "max_total_power":
         denominator = composition @ (1.0 / calibration)
-        total_rate = float(config.operation.total_power_w) / denominator
+        total_rate = float(config.operation.max_total_power_w) / denominator
     else:
         fixed_index = config.target_names.index(str(config.operation.fixed_target))
         fixed_fraction = composition[:, fixed_index]
