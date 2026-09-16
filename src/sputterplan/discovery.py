@@ -279,7 +279,6 @@ def write_starter_config(
         "operation": {
             "strategy": "total_power",
             "total_power_w": total_power_w,
-            "calculation_mode": "corrected",
             "hardware_limit_policy": "clip",
         },
         "planner": {

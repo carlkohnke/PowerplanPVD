@@ -51,7 +51,7 @@ class PlannerWindow(ttk.Frame):
         self.columnconfigure(1, weight=1)
         self.rowconfigure(8, weight=1)
 
-        ttk.Label(self, text="SputterPlan", style="Title.TLabel").grid(
+        ttk.Label(self, text="PowerplanPVD", style="Title.TLabel").grid(
             row=0, column=0, columnspan=3, sticky="w"
         )
         ttk.Label(
@@ -75,7 +75,7 @@ class PlannerWindow(ttk.Frame):
             row=0, column=0, padx=(0, 20)
         )
         ttk.Checkbutton(
-            options, text="Overwrite existing SputterPlan files", variable=self.overwrite
+            options, text="Overwrite existing PowerplanPVD files", variable=self.overwrite
         ).grid(row=0, column=1)
 
         actions = ttk.Frame(self)
@@ -119,7 +119,7 @@ class PlannerWindow(ttk.Frame):
 
     def _choose_config(self) -> None:
         path = filedialog.askopenfilename(
-            title="Choose SputterPlan configuration",
+            title="Choose PowerplanPVD configuration",
             filetypes=[("YAML or JSON", "*.yaml *.yml *.json"), ("All files", "*.*")],
         )
         if path:
@@ -153,10 +153,10 @@ class PlannerWindow(ttk.Frame):
         include_plots = self.include_plots.get()
         overwrite = self.overwrite.get()
         if not config:
-            messagebox.showwarning("SputterPlan", "Choose a YAML or JSON configuration first.")
+            messagebox.showwarning("PowerplanPVD", "Choose a YAML or JSON configuration first.")
             return
         if action == "plan" and not output:
-            messagebox.showwarning("SputterPlan", "Choose an output folder first.")
+            messagebox.showwarning("PowerplanPVD", "Choose an output folder first.")
             return
         self._set_busy(True)
         self.status.set("Validating inputs…" if action == "validate" else "Creating plan…")
@@ -215,7 +215,7 @@ class PlannerWindow(ttk.Frame):
         self._set_busy(False)
         self.status.set("Could not complete the request. Review the message below.")
         self._set_summary(message)
-        messagebox.showerror("SputterPlan", message)
+        messagebox.showerror("PowerplanPVD", message)
 
     def _open_report(self) -> None:
         if self.last_report and self.last_report.exists():
@@ -228,7 +228,7 @@ class PlannerWindow(ttk.Frame):
 
 def main() -> None:
     root = tk.Tk()
-    root.title("SputterPlan")
+    root.title("PowerplanPVD")
     root.geometry("920x700")
     root.minsize(760, 560)
     style = ttk.Style(root)

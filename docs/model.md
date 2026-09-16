@@ -15,7 +15,8 @@ The model assumes target deposition rates add linearly and deposited composition
 x_i = r_i / sum(r_j)
 ```
 
-This is the model used by the legacy MATLAB program. It does not model transport geometry, sticking coefficients, target poisoning, resputtering, density changes, or composition-dependent yield.
+The model does not include transport geometry, sticking coefficients, target poisoning,
+resputtering, density changes, or composition-dependent yield.
 
 ## Total-power solution
 
@@ -42,19 +43,18 @@ P_i = x_i r_total / K_i
 
 ## Hardware-feasible powers
 
-Legacy-compatible mode applies the configured off and minimum-stable thresholds after the ideal solution, matching the original script. Its time calculation still uses the pre-threshold ideal rate.
+For total-power operation, PowerplanPVD identifies targets that should be off, applies minimum and
+maximum target powers, and projects the ideal power vector onto the feasible bounds while
+maintaining the requested total-power sum. If those constraints are mutually incompatible,
+`hardware_limit_policy: error` stops; `clip` returns the bounded powers and a prominent warning.
 
-Corrected total-power mode identifies targets that should be off, applies minimum and maximum target powers, and projects the ideal power vector onto the feasible bounds with the requested total-power sum. If those constraints are mutually incompatible, `hardware_limit_policy: error` stops; `clip` returns the bounded powers and a prominent warning.
+For fixed-target operation, it applies each target's on/off, minimum, and maximum constraints and
+then holds the selected target at the configured fixed power.
 
 ## Deposition time
 
-Legacy-compatible mode uses the rate at the right endpoint of each thickness interval:
-
-```text
-dt_j = (z_j - z_(j-1)) / r_total,j
-```
-
-Corrected mode integrates reciprocal rate with the trapezoidal rule:
+Deposition time is calculated from the hardware-feasible deposition rates by integrating reciprocal
+rate with the trapezoidal rule:
 
 ```text
 dt_j = (z_j - z_(j-1)) * (1/r_(j-1) + 1/r_j) / 2

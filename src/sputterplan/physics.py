@@ -35,7 +35,7 @@ def _project_box_sum(
     return result
 
 
-def _legacy_limits(ideal: np.ndarray, config: PlanConfig) -> tuple[np.ndarray, list[str]]:
+def _apply_individual_limits(ideal: np.ndarray, config: PlanConfig) -> tuple[np.ndarray, list[str]]:
     feasible = ideal.copy()
     warnings: list[str] = []
     for index, target in enumerate(config.targets):
@@ -54,7 +54,7 @@ def _legacy_limits(ideal: np.ndarray, config: PlanConfig) -> tuple[np.ndarray, l
     return feasible, warnings
 
 
-def _corrected_limits(ideal: np.ndarray, config: PlanConfig) -> tuple[np.ndarray, list[str]]:
+def _apply_hardware_limits(ideal: np.ndarray, config: PlanConfig) -> tuple[np.ndarray, list[str]]:
     feasible = np.zeros_like(ideal)
     warnings: list[str] = []
     off = np.asarray([target.off_below_power_w for target in config.targets])
@@ -87,8 +87,8 @@ def _corrected_limits(ideal: np.ndarray, config: PlanConfig) -> tuple[np.ndarray
                     "the achieved total power is reported in the outputs."
                 )
     else:
-        feasible, legacy_warnings = _legacy_limits(ideal, config)
-        warnings.extend(legacy_warnings)
+        feasible, target_warnings = _apply_individual_limits(ideal, config)
+        warnings.extend(target_warnings)
         fixed_index = config.target_names.index(str(config.operation.fixed_target))
         fixed_power = float(config.operation.fixed_power_w)
         fixed_target = config.targets[fixed_index]
@@ -108,18 +108,13 @@ def _compositions_from_rates(rates: np.ndarray) -> np.ndarray:
     return rates / totals[:, None]
 
 
-def _time_grid(
-    distance_nm: np.ndarray, total_rate_nm_per_min: np.ndarray, legacy: bool
-) -> np.ndarray:
+def _time_grid(distance_nm: np.ndarray, total_rate_nm_per_min: np.ndarray) -> np.ndarray:
     if np.any(total_rate_nm_per_min <= 0):
         row = int(np.flatnonzero(total_rate_nm_per_min <= 0)[0])
         raise PlanningError(f"Total deposition rate is not positive at profile row {row + 1}.")
     delta_distance = np.diff(distance_nm)
-    if legacy:
-        delta_time_s = delta_distance / total_rate_nm_per_min[1:] * 60.0
-    else:
-        inverse_rate = 1.0 / total_rate_nm_per_min
-        delta_time_s = delta_distance * 0.5 * (inverse_rate[:-1] + inverse_rate[1:]) * 60.0
+    inverse_rate = 1.0 / total_rate_nm_per_min
+    delta_time_s = delta_distance * 0.5 * (inverse_rate[:-1] + inverse_rate[1:]) * 60.0
     return np.concatenate(([0.0], np.cumsum(delta_time_s)))
 
 
@@ -128,35 +123,13 @@ def compute_physics(config: PlanConfig, profile: CompositionProfile) -> PhysicsR
         [target.rate_nm_per_min_per_watt for target in config.targets], dtype=float
     )
     composition = profile.compositions
-    legacy = config.operation.calculation_mode == "legacy_compatible"
-    if legacy:
-        slack_name = config.operation.legacy_slack_target
-        if slack_name is None:
-            slack_name = (
-                config.operation.fixed_target
-                if config.operation.strategy == "fixed_target"
-                else config.target_names[-1]
-            )
-        slack_index = config.target_names.index(str(slack_name))
-        other = np.arange(len(config.targets)) != slack_index
-        implicit_slack_fraction = 1.0 - np.sum(composition[:, other], axis=1)
-        if np.any(implicit_slack_fraction <= 0):
-            row = int(np.flatnonzero(implicit_slack_fraction <= 0)[0])
-            raise PlanningError(
-                f"Legacy slack target {slack_name!r} has nonpositive implicit composition "
-                f"at profile row {row + 1}."
-            )
-        effective_composition = composition.copy()
-        effective_composition[:, slack_index] = implicit_slack_fraction
-    else:
-        effective_composition = composition
 
     if config.operation.strategy == "total_power":
-        denominator = effective_composition @ (1.0 / calibration)
+        denominator = composition @ (1.0 / calibration)
         total_rate = float(config.operation.total_power_w) / denominator
     else:
         fixed_index = config.target_names.index(str(config.operation.fixed_target))
-        fixed_fraction = effective_composition[:, fixed_index]
+        fixed_fraction = composition[:, fixed_index]
         if np.any(fixed_fraction <= 0):
             row = int(np.flatnonzero(fixed_fraction <= 0)[0])
             raise PlanningError(
@@ -166,18 +139,15 @@ def compute_physics(config: PlanConfig, profile: CompositionProfile) -> PhysicsR
         total_rate = (
             calibration[fixed_index] * float(config.operation.fixed_power_w) / fixed_fraction
         )
-    ideal_rates = effective_composition * total_rate[:, None]
+    ideal_rates = composition * total_rate[:, None]
     ideal_power = ideal_rates / calibration[None, :]
 
-    if legacy:
-        feasible_power, warnings = _legacy_limits(ideal_power, config)
-    else:
-        feasible_power, warnings = _corrected_limits(ideal_power, config)
+    feasible_power, warnings = _apply_hardware_limits(ideal_power, config)
 
     feasible_rates = feasible_power * calibration[None, :]
     feasible_composition = _compositions_from_rates(feasible_rates)
-    time_rates = np.sum(ideal_rates if legacy else feasible_rates, axis=1)
-    time_s = _time_grid(profile.distance_nm, time_rates, legacy)
+    time_rates = np.sum(feasible_rates, axis=1)
+    time_s = _time_grid(profile.distance_nm, time_rates)
 
     changed = np.abs(feasible_power - ideal_power) > 1e-10
     if np.any(changed):

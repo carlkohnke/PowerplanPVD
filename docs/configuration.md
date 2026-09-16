@@ -82,37 +82,33 @@ Target limitation fields:
 | `max_power_w` | Maximum target power | Enforced when provided |
 | `max_ramp_rate_w_per_s` | Approved target ramp rate | Checked and reported as a warning |
 
-Ramp-rate violations are not automatically corrected because stretching deposition time would
+Ramp-rate violations are not automatically resolved because stretching deposition time would
 change the deposited thickness and composition.
 
-## Operating strategy
+## There are multiple operating strategies...
 
 ### Fixed total chamber power
+The target powers are distributed so their sum equals `total_power_w` whenever the target bounds
+make that possible.
 
 ```yaml
 operation:
   strategy: total_power
   total_power_w: 300
-  calculation_mode: corrected
   hardware_limit_policy: error
 ```
 
-The target powers are distributed so their sum equals `total_power_w` whenever the target bounds
-make that possible.
-
 ### One target at fixed power
+The named target stays at `fixed_power_w`; all other target powers vary. The desired fraction of the
+fixed target must be greater than zero throughout the profile.
 
 ```yaml
 operation:
   strategy: fixed_target
   fixed_target: Ti
   fixed_power_w: 150
-  calculation_mode: corrected
   hardware_limit_policy: error
 ```
-
-The named target stays at `fixed_power_w`; all other target powers vary. The desired fraction of the
-fixed target must be greater than zero throughout the profile.
 
 ### Hardware-limit policy
 
@@ -121,23 +117,6 @@ fixed target must be greater than zero throughout the profile.
 
 Use `error` when a plan must never proceed with a degraded composition. Use `clip` to investigate
 what the configured equipment limits can achieve.
-
-## Calculation mode
-
-- `corrected`: recommended for new plans. Time is calculated from hardware-feasible powers using
-  trapezoidal integration, and total power is preserved when feasible.
-- `legacy_compatible`: reproduces the original MATLAB power solution, low-power behavior, and
-  right-endpoint time integration for regression and historical comparisons.
-
-Legacy mode may also set:
-
-```yaml
-operation:
-  legacy_slack_target: Ti
-```
-
-The slack target closes the composition balance omitted by the original symbolic MATLAB system.
-See [MATLAB equivalence](matlab_equivalence.md) for the exact scope of compatibility.
 
 ## Planner settings
 
@@ -198,7 +177,6 @@ targets:
 operation:
   strategy: total_power
   total_power_w: 300
-  calculation_mode: corrected
   hardware_limit_policy: error
 
 planner:

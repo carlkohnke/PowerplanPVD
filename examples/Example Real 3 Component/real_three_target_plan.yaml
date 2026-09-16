@@ -1,39 +1,39 @@
-name: Corrected Ni-Ti-Nb distance-optimized profile
+name: Real three-target Ni-Ti-Nb demonstration
 
 profile:
-  path: ${SPUTTERPLAN_LEGACY_WORKBOOK}
-  sheet: Distance Optimized
-  header_row: 2
-  data_start_row: 3
-  data_end_row: 603
-  distance_column: A
-  composition_columns: {Ni: B, Ti: C, Nb: D}
+  path: Tricomponent_real_NiTiNb.xlsx
+  distance_column: Distance (nm)
   composition_basis: fraction
-  composition_sum_tolerance: 0.000002
+  normalize_compositions: true
 
 targets:
   - name: Ni
     rate_nm_per_min_per_watt: 0.1003
     off_below_power_w: 1.0
     min_stable_power_w: 2.0
+    max_power_w: 300.0
+    max_ramp_rate_w_per_s: 2.0
   - name: Ti
     rate_nm_per_min_per_watt: 0.0533
     off_below_power_w: 1.0
     min_stable_power_w: 2.0
+    max_power_w: 300.0
+    max_ramp_rate_w_per_s: 2.0
   - name: Nb
     rate_nm_per_min_per_watt: 0.0710
     off_below_power_w: 1.0
     min_stable_power_w: 2.0
+    max_power_w: 300.0
+    max_ramp_rate_w_per_s: 2.0
 
 operation:
   strategy: total_power
   total_power_w: 300.0
-  calculation_mode: corrected
   hardware_limit_policy: clip
 
 planner:
   power_tolerance_abs_w: 2.0
-  power_tolerance_rel: 0.05
-  composition_tolerance_abs: 0.02
-  max_breakpoints: 100
+  power_tolerance_rel: 0.03
+  composition_tolerance_abs: 0.015
+  max_breakpoints: 50
   ramp_rate_resolution_w_per_s: 0.001

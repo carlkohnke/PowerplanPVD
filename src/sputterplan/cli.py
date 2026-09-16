@@ -91,7 +91,7 @@ def _parser() -> argparse.ArgumentParser:
         help="Output folder. Default: a results folder beside the configuration.",
     )
     plan.add_argument("--no-plots", action="store_true")
-    plan.add_argument("--force", action="store_true", help="Overwrite existing SputterPlan files.")
+    plan.add_argument("--force", action="store_true", help="Overwrite existing PowerplanPVD files.")
     plan.add_argument("--json", action="store_true", help="Print the summary as JSON.")
     plan.add_argument("--open-report", action="store_true", help="Open report.html after success.")
     return parser

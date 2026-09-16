@@ -37,7 +37,9 @@ def test_planner_respects_tolerances(three_target_case):
 
 def test_example_writes_complete_outputs(tmp_path: Path):
     root = Path(__file__).resolve().parents[1]
-    config = load_config(root / "examples" / "three_target_plan.yaml")
+    config = load_config(
+        root / "examples" / "Example Simple 3 Component" / "simple_three_target_plan.yaml"
+    )
     result = create_plan(config)
     paths = write_outputs(result, config, tmp_path)
     names = {path.name for path in paths}

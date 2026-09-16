@@ -11,7 +11,9 @@ from sputterplan.io import load_profile
 
 def test_example_configuration_and_csv_load():
     root = Path(__file__).resolve().parents[1]
-    config = load_config(root / "examples" / "three_target_plan.yaml")
+    config = load_config(
+        root / "examples" / "Example Simple 3 Component" / "simple_three_target_plan.yaml"
+    )
     profile = load_profile(config)
     assert profile.target_names == ("Alpha", "Beta", "Gamma")
     assert profile.compositions.shape == (11, 3)

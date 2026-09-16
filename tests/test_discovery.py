@@ -102,7 +102,7 @@ def test_write_starter_config_round_trips(tmp_path: Path):
 
 
 def test_starter_config_supports_explicit_excel_columns(tmp_path: Path):
-    workbook_path = tmp_path / "legacy.xlsx"
+    workbook_path = tmp_path / "duplicate_headers.xlsx"
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = "Gradient"

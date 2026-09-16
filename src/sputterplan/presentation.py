@@ -25,7 +25,7 @@ def format_summary_text(summary: dict[str, Any]) -> str:
         f"Operator steps: {summary['breakpoint_count']}",
         f"Thickness: {summary['total_thickness_nm']:.3f} nm",
         f"Estimated deposition time: {format_duration(summary['total_time_s'])}",
-        f"Mode: {summary['calculation_mode']} ({summary['operation_strategy']})",
+        f"Operating strategy: {summary['operation_strategy']}",
         "",
         "Maximum composition error",
     ]

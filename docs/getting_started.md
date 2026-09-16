@@ -117,7 +117,6 @@ targets:
 operation:
   strategy: total_power
   total_power_w: 300
-  calculation_mode: corrected
   hardware_limit_policy: error
 ```
 

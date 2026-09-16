@@ -7,7 +7,7 @@ from sputterplan.cli import main
 
 def test_cli_validate_and_plan(tmp_path: Path, capsys):
     root = Path(__file__).resolve().parents[1]
-    config = root / "examples" / "three_target_plan.yaml"
+    config = root / "examples" / "Example Simple 3 Component" / "simple_three_target_plan.yaml"
     assert main(["validate", str(config)]) == 0
     validation = capsys.readouterr().out
     assert "Configuration and profile are valid" in validation

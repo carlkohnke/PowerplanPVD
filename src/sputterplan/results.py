@@ -55,7 +55,6 @@ class PlanResult:
     desired_composition: np.ndarray
     physics: PhysicsResult
     schedule: ScheduleResult
-    calculation_mode: str
     operation_strategy: str
     target_rates_nm_per_min_per_watt: np.ndarray
 
@@ -71,7 +70,6 @@ class PlanResult:
         warnings = list(dict.fromkeys((*self.physics.warnings, *self.schedule.warnings)))
         return {
             "name": self.name,
-            "calculation_mode": self.calculation_mode,
             "operation_strategy": self.operation_strategy,
             "target_names": list(self.target_names),
             "point_count": int(self.distance_nm.size),

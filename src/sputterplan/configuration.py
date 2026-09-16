@@ -88,21 +88,13 @@ class OperationConfig:
     total_power_w: float | None = None
     fixed_target: str | None = None
     fixed_power_w: float | None = None
-    calculation_mode: str = "corrected"
     hardware_limit_policy: str = "clip"
-    legacy_slack_target: str | None = None
 
     def validate(self, target_names: set[str]) -> None:
         if self.strategy not in {"total_power", "fixed_target"}:
             raise ConfigurationError("operation.strategy must be 'total_power' or 'fixed_target'.")
-        if self.calculation_mode not in {"corrected", "legacy_compatible"}:
-            raise ConfigurationError(
-                "operation.calculation_mode must be 'corrected' or 'legacy_compatible'."
-            )
         if self.hardware_limit_policy not in {"clip", "error"}:
             raise ConfigurationError("operation.hardware_limit_policy must be 'clip' or 'error'.")
-        if self.legacy_slack_target is not None and self.legacy_slack_target not in target_names:
-            raise ConfigurationError("operation.legacy_slack_target must name a configured target.")
         if self.strategy == "total_power":
             if self.total_power_w is None or self.total_power_w <= 0:
                 raise ConfigurationError("total_power strategy requires positive total_power_w.")
@@ -140,7 +132,7 @@ class PlanConfig:
     profile: ProfileConfig
     operation: OperationConfig
     planner: PlannerConfig = field(default_factory=PlannerConfig)
-    name: str = "Sputtering plan"
+    name: str = "PowerplanPVD plan"
 
     @property
     def target_names(self) -> tuple[str, ...]:
@@ -211,7 +203,7 @@ def plan_config_from_dict(data: Mapping[str, Any], base_dir: Path | None = None)
     except TypeError as exc:
         raise ConfigurationError(f"Invalid configuration field: {exc}") from exc
     config = PlanConfig(
-        name=str(root.get("name", "Sputtering plan")),
+        name=str(root.get("name", "PowerplanPVD plan")),
         targets=targets,
         profile=profile,
         operation=operation,

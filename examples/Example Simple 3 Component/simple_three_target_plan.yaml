@@ -1,7 +1,7 @@
 name: Three-target demonstration
 
 profile:
-  path: three_target_gradient.csv
+  path: Tricomponent_Example.csv
   distance_column: distance_nm
   composition_basis: fraction
 
@@ -28,7 +28,6 @@ targets:
 operation:
   strategy: total_power
   total_power_w: 300.0
-  calculation_mode: corrected
   hardware_limit_policy: clip
 
 planner:

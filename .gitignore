@@ -12,6 +12,8 @@ tmp/
 *.mat
 .DS_Store
 
-# Keep lab workbooks outside the repository unless their release is approved.
+# Keep lab workbooks outside the repository unless they are approved examples.
 *.xlsx
 *.xls
+!examples/**/*.xlsx
+examples/**/~$*.xlsx

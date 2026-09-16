@@ -26,7 +26,6 @@ def create_plan(config: PlanConfig, profile: CompositionProfile | None = None) -
         desired_composition=loaded_profile.compositions,
         physics=physics,
         schedule=schedule,
-        calculation_mode=config.operation.calculation_mode,
         operation_strategy=config.operation.strategy,
         target_rates_nm_per_min_per_watt=np.asarray(
             [target.rate_nm_per_min_per_watt for target in config.targets],

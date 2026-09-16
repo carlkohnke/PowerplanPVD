@@ -1,11 +1,10 @@
 # PowerplanPVD
 
-PowerplanPVD turns a desired through-thickness composition gradient into a practical multi-target
-magnetron sputtering plan. It calculates target powers and coordinated ramp changes, predicts the
-resulting composition, and produces an operator-readable report.
+Generate precise physical vapor deposition (PVD) sputtering plans for manufacturing metal alloy thin-films with desired z-direction compositional gradients. Created for optimization of multilayer, magnetron-sputtered high entropy alloy (HEA) films.
 
-The tool was created for multilayer and compositionally graded metal-alloy thin films, including
-high-entropy alloys. It supports any number of targets.
+PowerplanPVD converts a desired composition-versus-thickness profile into a practical multi-target magnetron sputtering schedule. It calculates ideal chamber powers, applies configured hardware limits, reduces the power curves to shared operator change times, predicts the deposited composition, and reports the resulting errors.
+
+The calculation is agnostic to the number and names of targets. Each target requires its own measured deposition-rate calibration and specified sputtering hardware limits.
 
 ## What you provide
 
@@ -19,8 +18,8 @@ Every plan needs three things:
    minimum-stable-power, maximum-power, and ramp-rate limits.
 
 PowerplanPVD assumes each target's deposition rate varies linearly with power. See the
-[configuration reference](docs/configuration.md) for calibration requirements and every available
-setting.
+[configuration reference](docs/configuration.md) for calibration requirements and available
+settings.
 
 ## How you use it
 
@@ -33,12 +32,9 @@ open the finished report and output folder.
 sputterplan-gui
 ```
 
-The GUI consumes a YAML or JSON configuration. You can write that file manually or generate a
-starter configuration with the CLI.
+### Configuration file creation
 
-### Configuration file and CLI
-
-To create a starter configuration from a composition file:
+To use the CLI to create a starter configuration from a composition file:
 
 ```powershell
 sputterplan inspect-profile .\gradient.xlsx
@@ -48,17 +44,18 @@ sputterplan init .\gradient.xlsx `
   --target Nb=0.0710 `
   --total-power 300
 ```
+where the --target command denotes the slope of the measured linear deposition-rate-versus-power
+relationship in nm/min/W.
 
-Review the generated YAML and add the limitations that apply to your equipment. Then validate and
-create the plan:
+Then validate and create the plan:
 
 ```powershell
 sputterplan validate .\gradient.yaml
 sputterplan plan .\gradient.yaml --open-report
 ```
 
-You can instead write a configuration manually, starting from one of the files in
-[examples](examples/).
+You can instead write a YAML or JSON configuration manually, starting from one of the files in
+[examples](examples/)
 
 ## Results
 
@@ -82,8 +79,7 @@ py -3.13 -m venv .venv
 - [Configuration reference](docs/configuration.md) — profiles, calibrations, limitations, operating
   strategies, and planner settings
 - [Calculation model](docs/model.md) — equations, assumptions, and numerical approach
-- [MATLAB equivalence](docs/matlab_equivalence.md) — comparison with the original MATLAB program
-- [Operator review checklist](docs/operator_review.md) — required checks before using a plan
+- [Operator review checklist](docs/operator_review.md) — checks before using a plan
 
 PowerplanPVD is a planning tool; it does not control deposition equipment or establish safe
 equipment limits. Review every generated schedule using approved laboratory procedures.

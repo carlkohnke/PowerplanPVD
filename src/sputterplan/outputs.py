@@ -156,7 +156,7 @@ def _write_html_report(result: PlanResult, path: Path, include_plots: bool) -> N
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{html.escape(result.name)} — SputterPlan report</title>
+  <title>{html.escape(result.name)} — PowerplanPVD report</title>
   <style>
     :root {{ color-scheme: light; --ink:#17202a; --muted:#5d6d7e; --line:#d5d8dc;
       --accent:#1f618d; --panel:#f7f9f9; --warn:#fff4e5; --warnline:#d68910; }}
@@ -179,7 +179,7 @@ def _write_html_report(result: PlanResult, path: Path, include_plots: bool) -> N
 </head>
 <body>
   <h1>{html.escape(result.name)}</h1>
-  <p class="subtitle">SputterPlan operating report</p>
+  <p class="subtitle">PowerplanPVD operating report</p>
   <div class="cards">
     <div class="card"><span>Targets</span><strong>{len(result.target_names)}</strong>{html.escape(", ".join(result.target_names))}</div>
     <div class="card"><span>Operator steps</span><strong>{summary["breakpoint_count"]}</strong>{summary["point_count"]} profile points</div>
@@ -232,7 +232,7 @@ def write_outputs(
     existing = [candidate.name for candidate in planned if candidate.exists()]
     if existing and not overwrite:
         raise OutputError(
-            f"Output folder already contains SputterPlan files: {', '.join(existing)}. "
+            f"Output folder already contains PowerplanPVD files: {', '.join(existing)}. "
             "Choose another folder or enable overwrite explicitly."
         )
 
