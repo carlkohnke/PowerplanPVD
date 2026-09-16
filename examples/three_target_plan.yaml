@@ -1,0 +1,39 @@
+name: Three-target demonstration
+
+profile:
+  path: three_target_gradient.csv
+  distance_column: distance_nm
+  composition_basis: fraction
+
+targets:
+  - name: Alpha
+    rate_nm_per_min_per_watt: 0.1003
+    off_below_power_w: 1.0
+    min_stable_power_w: 2.0
+    max_power_w: 250.0
+    max_ramp_rate_w_per_s: 2.0
+  - name: Beta
+    rate_nm_per_min_per_watt: 0.0533
+    off_below_power_w: 1.0
+    min_stable_power_w: 2.0
+    max_power_w: 250.0
+    max_ramp_rate_w_per_s: 2.0
+  - name: Gamma
+    rate_nm_per_min_per_watt: 0.0710
+    off_below_power_w: 1.0
+    min_stable_power_w: 2.0
+    max_power_w: 250.0
+    max_ramp_rate_w_per_s: 2.0
+
+operation:
+  strategy: total_power
+  total_power_w: 300.0
+  calculation_mode: corrected
+  hardware_limit_policy: clip
+
+planner:
+  power_tolerance_abs_w: 2.0
+  power_tolerance_rel: 0.03
+  composition_tolerance_abs: 0.015
+  max_breakpoints: 50
+  ramp_rate_resolution_w_per_s: 0.001

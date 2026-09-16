@@ -1,0 +1,16 @@
+{
+  "matlab_version": "R2024b",
+  "matlab_runtime_seconds": 23.7454228,
+  "source_file": "Sputtering_Operation_Plan_Maker.m",
+  "source_sha256": "016814302eda16b63db435b1e3bed2cf46e72c397be3175de8a6088e00edbed0",
+  "workbook_file": "Sputtering Rates and Plans.xlsx",
+  "workbook_sha256": "dc803f90b3e0a4a392dd684e8da7fafa5e236653978a96bc5250108e5336a86f",
+  "profile_sheet": "Distance Optimized",
+  "profile_range": "A3:D603",
+  "target_rates_nm_per_min_per_watt": [
+    0.1003,
+    0.0533,
+    0.071
+  ],
+  "total_power_w": 300.0
+}
